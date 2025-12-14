@@ -1,0 +1,42 @@
+name: 自动同步上游Tags
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # 每天凌晨2点执行
+  workflow_dispatch:      # 支持手动触发
+
+jobs:
+  sync-tags:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout fork仓库
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # 获取完整历史
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 配置Git
+      run: |
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+    - name: 添加upstream远程仓库
+      run: |
+        git remote add upstream https://github.com/xiaoyaocz/dart_simple_live.git || true
+        git remote -v
+
+    - name: 获取并同步所有Tags
+      run: |
+        # 获取上游tags（包含完整历史）
+        git fetch upstream --tags --force
+        
+        # 将tags推送到fork仓库
+        git push origin --tags --force
+
+    - name: 可选：同步分支代码
+      run: |
+        # 同步main/master分支（根据你的主分支名称修改）
+        git checkout master
+        git merge upstream/master || echo "无更新"
+        git push || echo "无需推送"
